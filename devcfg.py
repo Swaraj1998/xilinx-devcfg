@@ -314,7 +314,7 @@ if __name__ == "__main__":
             print_usage_exit(1)
         pcap_bitstream_read(devc, int(sys.argv[2]), int(sys.argv[3])) 
 
-    else if sys.argv[1] == 'write':
+    elif sys.argv[1] == 'write':
         if len(sys.argv) != 3:
             print('Invalid number of arguments!')
             print_usage_exit(1)
