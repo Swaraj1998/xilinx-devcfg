@@ -282,7 +282,7 @@ def pcap_bitstream_write(devc, fname):
 
 def print_usage_exit(err):
     print("Usage: sudo python devcfg.py [read|write] <args>")
-    print("       sudo python devcfg.py read <frame_addr> <num_frames>")
+    print("       sudo python devcfg.py read <frame_addr_hex> <num_frames>")
     print("       sudo python devcfg.py write <bitfile_name>")
     exit(err)
 
@@ -312,7 +312,7 @@ if __name__ == "__main__":
         if len(sys.argv) != 4:
             print('Invalid number of arguments!')
             print_usage_exit(1)
-        pcap_bitstream_read(devc, int(sys.argv[2]), int(sys.argv[3])) 
+        pcap_bitstream_read(devc, hex(sys.argv[2]), int(sys.argv[3])) 
 
     elif sys.argv[1] == 'write':
         if len(sys.argv) != 3:
