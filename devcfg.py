@@ -53,7 +53,7 @@ class DevC:
     IXR_ALL_MASK            = 0xf8f7f87f
 
     def __init__(self):
-        fd = os.open("/dev/mem", os.O_RDWR | os.O_SYNC)
+        fd = os.open('/dev/mem', os.O_RDWR | os.O_SYNC)
         self.mm = mmap.mmap(fd, self.DEVC_ADDR_RANGE, mmap.MAP_SHARED,
                 mmap.PROT_READ | mmap.PROT_WRITE, offset=self.DEVC_ADDR)
         os.close(fd)
@@ -61,12 +61,12 @@ class DevC:
     def read(self, reg_offset):
         #time.sleep(0.1)
         self.mm.seek(reg_offset)
-        return int.from_bytes(self.mm.read(4), "little")
+        return int.from_bytes(self.mm.read(4), 'little')
 
     def write(self, reg_offset, val):
         #time.sleep(0.1)
         self.mm.seek(reg_offset)
-        self.mm.write(val.to_bytes(4, "little"))
+        self.mm.write(val.to_bytes(4, 'little'))
 
     def is_dma_busy(self):
         val = self.read(DevC.STATUS_REG)
@@ -138,12 +138,12 @@ def pcap_enable(devc):
             ctrl | DevC.CTRL_PCAP_PR_MASK | DevC.CTRL_PCAP_MODE_MASK)
 
 def store_cmd_seq(seq, addr):
-    fd = os.open("/dev/mem", os.O_RDWR | os.O_SYNC)
+    fd = os.open('/dev/mem', os.O_RDWR | os.O_SYNC)
     mm = mmap.mmap(fd, len(seq) * 4 + 4, mmap.MAP_SHARED,
             mmap.PROT_READ | mmap.PROT_WRITE, offset=addr)
     os.close(fd)
     for word in seq:
-        mm.write(word.to_bytes(4, "little"))
+        mm.write(word.to_bytes(4, 'little'))
 
 def pcap_reg_read(devc):
     IDCODE_READ_SEQ = [
@@ -282,12 +282,12 @@ def pcap_bitstream_write(devc, fname):
         (DevC.IXR_PCFG_DONE_MASK | DevC.IXR_D_P_DONE_MASK | DevC.IXR_DMA_DONE_MASK))
 
 def print_usage_exit(err):
-    print("Usage: sudo python devcfg.py [read|write] <args>")
-    print("       sudo python devcfg.py read <frame_addr_hex> <num_frames>")
-    print("       sudo python devcfg.py write <bitfile_name>")
+    print('Usage: ' + sys.argv[0] + ' [read|write] <args>')
+    print('       ' + sys.argv[0] + ' read <frame_addr> <num_frames>')
+    print('       ' + sys.argv[0] + ' write <bitfile_name>')
     exit(err)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 
     devc = DevC()
 
