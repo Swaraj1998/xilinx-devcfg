@@ -1,7 +1,7 @@
 import sys
 
 # Use little endian for byte swapped *.bin files
-ENDIAN = 'little'
+ENDIAN = 'big'
 
 WORDS_PER_FRAME = 101
 FRAME_ADDR_CMD = 0x30002001
@@ -68,6 +68,8 @@ if __name__ == '__main__':
 
     bin_file_name = sys.argv[1]
     faddr_list = sys.argv[2:]
+
+    faddr_list.sort()
 
     fout = open(bin_file_name + '.partial', 'wb')
     for cmd in INIT_COMMANDS:
