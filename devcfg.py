@@ -133,7 +133,7 @@ def dump_regs(devc):
     print('INT_STS_REG : ' + hex(devc.read(DevC.INT_STS_REG)))
 
 def pcap_enable(devc):
-    ctrl = devc.read(DevC.CTRL_REG) 
+    ctrl = devc.read(DevC.CTRL_REG)
     devc.write(DevC.CTRL_REG,
             ctrl | DevC.CTRL_PCAP_PR_MASK | DevC.CTRL_PCAP_MODE_MASK)
 
@@ -144,6 +144,19 @@ def store_cmd_seq(seq, addr):
     os.close(fd)
     for word in seq:
         mm.write(word.to_bytes(4, 'little'))
+
+def load_frame_data(addr):
+    base = addr & 0xfffff000
+    fd = os.open('/dev/mem', os.O_RDWR | os.O_SYNC)
+    mm = mmap.mmap(fd, (addr-base) + WORDS_PER_FRAME * 4, mmap.MAP_SHARED,
+            mmap.PROT_READ | mmap.PROT_WRITE, offset=base)
+    mm.seek(addr-base)
+    os.close(fd)
+    buf = b''
+    for i in range(WORDS_PER_FRAME):
+        val = int.from_bytes(mm.read(4), 'little')
+        buf += val.to_bytes(4, 'big')
+    return buf
 
 def pcap_reg_read(devc):
     IDCODE_READ_SEQ = [
@@ -178,7 +191,7 @@ def pcap_reg_read(devc):
     time.sleep(0.1)
 
     store_cmd_seq(END_READ_SEQ, GLBL_SRC_ADDR)
-    devc.initiate_dma(GLBL_SRC_ADDR, DevC.DMA_INVALID_ADDR, len(END_READ_SEQ), 0) 
+    devc.initiate_dma(GLBL_SRC_ADDR, DevC.DMA_INVALID_ADDR, len(END_READ_SEQ), 0)
 
 def pcap_bitstream_read(devc, frame_addr, num_frames):
     num_frame_words = num_frames * WORDS_PER_FRAME
@@ -222,7 +235,7 @@ def pcap_bitstream_read(devc, frame_addr, num_frames):
             0x28006000,
             0x48000000 | (num_frame_words + WORDS_PER_FRAME),
             0x20000000,
-            0x20000000 ] 
+            0x20000000 ]
 
     for i in range(32):
         BITSTREAM_READ_SEQ.append(0x20000000)
@@ -259,10 +272,26 @@ def pcap_bitstream_read(devc, frame_addr, num_frames):
     time.sleep(0.1)
 
     store_cmd_seq(END_READ_SEQ, GLBL_SRC_ADDR)
-    devc.initiate_dma(GLBL_SRC_ADDR, DevC.DMA_INVALID_ADDR, len(END_READ_SEQ), 0) 
+    devc.initiate_dma(GLBL_SRC_ADDR, DevC.DMA_INVALID_ADDR, len(END_READ_SEQ), 0)
 
     devc.write(DevC.INT_STS_REG,
         (DevC.IXR_PCFG_DONE_MASK | DevC.IXR_D_P_DONE_MASK | DevC.IXR_DMA_DONE_MASK))
+
+    # skip the first (dummy) frame
+    next_addr = GLBL_DST_ADDR + WORDS_PER_FRAME * 4
+
+    buf = b''
+    FDRI_CMD = 0x30004000 | WORDS_PER_FRAME
+    FRAME_ADDR_CMD = 0x30002001
+    for i in range(num_frames):
+        frame = load_frame_data(next_addr)
+        next_addr += WORDS_PER_FRAME * 4
+        frame = FDRI_CMD.to_bytes(4, 'big') + frame
+        frame += FRAME_ADDR_CMD.to_bytes(4, 'big')
+        frame += (frame_addr+i).to_bytes(4, 'big')
+        buf += frame
+
+    return buf
 
 def pcap_bitstream_write(devc, fname):
     seq = []
@@ -313,7 +342,9 @@ if __name__ == '__main__':
         if len(sys.argv) != 4:
             print('Invalid number of arguments!')
             print_usage_exit(1)
-        pcap_bitstream_read(devc, int(sys.argv[2], 16), int(sys.argv[3])) 
+        buf = pcap_bitstream_read(devc, int(sys.argv[2], 16), int(sys.argv[3]))
+        with open('devcfg.out', 'wb') as f:
+            f.write(buf)
 
     elif sys.argv[1] == 'write':
         if len(sys.argv) != 3:
@@ -323,5 +354,5 @@ if __name__ == '__main__':
 
     else:
         print_usage_exit(1)
- 
+
     dump_regs(devc)
